@@ -6,6 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/ECNBits-sample.unity
-    guid: 9fc0d4010bbf28b4594072e72b8655ab
+    path: Assets/Scenes/ECNBits_Android_sample.unity
+    guid: a133ed4fb0231964788a23b839fbe7d5
   m_configObjects: {}

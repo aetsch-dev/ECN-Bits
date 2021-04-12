@@ -1,7 +1,10 @@
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
+
+import java.nio.file.Files
+import java.nio.file.Paths
+
 apply plugin: 'com.android.library'
 apply plugin: 'de.mannodermaus.android-junit5'
-
-def dirToplev = project.layout.projectDirectory.asFile.absolutePath
 
 // project licence: The MirOS Licence AND GPLv2 with Classpath Exception AND Apache 2.0
 // see src/legal/LICENCE and src/legal/COPYING
@@ -11,16 +14,44 @@ def dirToplev = project.layout.projectDirectory.asFile.absolutePath
 // apparently, there’s no standardised way to declare the project licence in Gradle:
 // https://discuss.gradle.org/t/how-to-declare-a-license-for-a-gradle-project/26114
 
+if (DefaultNativePlatform.currentOperatingSystem.windows) {
+    def repoRoot = project.layout.projectDirectory.asFile.parentFile.parentFile.absolutePath
+    def proc = ("cmd /c " + repoRoot + "\\test-git.bat /q").execute()
+    proc.waitForProcessOutput(System.out, System.err)
+    if (proc.exitValue() != 0)
+        throw new GradleScriptException("git repository clone consistency check failed", null)
+}
+
+static def checkPathSameness(final File f, final String s, final String msg) {
+    if (!Files.isSameFile(f.toPath(), Paths.get(s)))
+        throw new GradleScriptException(String.format(msg + " <%s>: %s", s, f), null)
+}
+
+static def getUnixPathEquivalent(final File afile) {
+    if (!afile.exists())
+        throw new GradleScriptException("File does not exist: " + afile, null)
+    afile.toPath() // ensure it’s cached
+    String s = afile.absolutePath
+    checkPathSameness(afile, s, "File does not match its absolute path")
+    if (DefaultNativePlatform.currentOperatingSystem.windows) {
+        s = s.replace('\\', '/')
+    }
+    checkPathSameness(afile, s, "File cannot be converted to Unix path")
+    return s
+}
+
+def dirToplev = getUnixPathEquivalent(project.layout.projectDirectory.asFile)
+
 android {
     compileSdkVersion 30
 
     defaultConfig {
         minSdkVersion 26
         targetSdkVersion 30
-        ndkVersion "22.0.7026061"
+        ndkVersion "22.1.7171670"
 
-        versionCode 6
-        versionName "2.1"
+        versionCode 7
+        versionName "2.2"
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
         consumerProguardFiles "consumer-rules.pro"
@@ -60,24 +91,24 @@ android {
 dependencies {
     implementation fileTree(dir: "libs", include: ["*.jar"])
 
-    annotationProcessor 'org.projectlombok:lombok:1.18.18'
+    annotationProcessor 'org.projectlombok:lombok:1.18.20'
     //noinspection AnnotationProcessorOnCompilePath because both are needed :/
-    compileOnly 'org.projectlombok:lombok:1.18.18'
+    compileOnly 'org.projectlombok:lombok:1.18.20'
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.1'
 
-    testAnnotationProcessor 'org.projectlombok:lombok:1.18.18'
+    testAnnotationProcessor 'org.projectlombok:lombok:1.18.20'
     //noinspection AnnotationProcessorOnCompilePath because both are needed :/
-    testCompileOnly 'org.projectlombok:lombok:1.18.18'
+    testCompileOnly 'org.projectlombok:lombok:1.18.20'
 
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
     androidTestImplementation 'junit:junit:4.13.2'
 
-    androidTestAnnotationProcessor 'org.projectlombok:lombok:1.18.18'
+    androidTestAnnotationProcessor 'org.projectlombok:lombok:1.18.20'
     //noinspection AnnotationProcessorOnCompilePath because both are needed :/
-    androidTestCompileOnly 'org.projectlombok:lombok:1.18.18'
+    androidTestCompileOnly 'org.projectlombok:lombok:1.18.20'
 }
 
 def dirForNativeNoNDK = project.layout.buildDirectory.get().dir("native-noNDK")
@@ -98,7 +129,7 @@ task buildGMakeNativeNoNDK(type: Exec) {
 }
 
 project.afterEvaluate {
-    if (org.gradle.internal.os.OperatingSystem.current().isLinux()) {
+    if (org.gradle.internal.os.OperatingSystem.current().linux) {
         testDebugUnitTest {
             dependsOn buildGMakeNativeNoNDK
             systemProperty "java.library.path", dirForNativeNoNDK.asFile.absolutePath + ":" + System.getProperty("java.library.path")
@@ -108,4 +139,10 @@ project.afterEvaluate {
             systemProperty "java.library.path", dirForNativeNoNDK.asFile.absolutePath + ":" + System.getProperty("java.library.path")
         }
     }
+
+    task externalNativeBuildCleanContainingDirectory(type: Delete) {
+        dependsOn tasks.externalNativeBuildCleanDebug, tasks.externalNativeBuildCleanRelease
+        delete project.layout.projectDirectory.dir(".cxx").asFile
+    }
+    tasks.clean.dependsOn(tasks.externalNativeBuildCleanContainingDirectory)
 }

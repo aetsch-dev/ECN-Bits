@@ -85,9 +85,9 @@ endef
 
 CPPFLAGS+=	-D_REENTRANT
 CPPFLAGS+=	-I$(call shellescape,${TOP})/inc
+$(eval $(call cc_opt,CPPFLAGS,-Wdate-time))
 CPPFLAGS+=	-D_FORTIFY_SOURCE=2
 CFLAGS+=	-Wall -Wformat
-$(eval $(call cc_opt,CFLAGS,-Wdate-time))
 CFLAGS+=	-Wextra
 $(eval $(call cc_opt,CFLAGS,-fstack-protector-strong,-fstack-protector))
 CFLAGS+=	-Werror=format-security
@@ -108,7 +108,12 @@ LIBDIR?=	${PREFIX}/lib
 ifeq (/usr,${PREFIX})
 MANDIR?=	${PREFIX}/share/man
 else
+ifeq (dyld:/usr/local,${RTLD_TYPE}:${PREFIX})
+# manpath on Mac OSX only includes /usr/local/share/man, not /usr/local/man
+MANDIR?=	${PREFIX}/share/man
+else
 MANDIR?=	${PREFIX}/man
+endif
 endif
 BINOWN?=	0
 BINGRP?=	0

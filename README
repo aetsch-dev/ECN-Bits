@@ -13,6 +13,20 @@ available under liberal (Open Source) licences.
 
 Development funded by Deutsche Telekom.
 
+┌──────────────────────────────────────────┐
+│ IMPORTANT note for git users on Windows® │
+└──────────────────────────────────────────┘
+
+This repository *must* be cloned with symbolic links *enabled*.
+Use test-git.bat to verify that this is the case, and if not,
+follow the instructions at…
+‣ https://github.com/git-for-windows/git/wiki/Symbolic-Links
+under “Allowing non-administrators to create symbolic links”
+(basically, on Windows 10 version 1703 “Creators Update” and
+newer, enable developer mode, otherwise set a group policy)
+to enable symlink support if needed, then re-clone with e.g.
+git clone -c core.symlinks=true https://github.com/tarent/ECN-Bits.git
+
 ┌────────────────────────────────┐
 │ Covered operating environments │
 └────────────────────────────────┘
@@ -49,6 +63,7 @@ Development funded by Deutsche Telekom.
   : Status: working (Netty example may be added later if demand exists)
   • PoC (Linux-specific and only for the buildhost architecture) first,
     possibly extended to other CPUs and OSes later, perhaps using JNA
+  ⚠ Valid only for Java < 15 (due to JEP 373)
 
 – BSD/Linux/MacOSX/WSL: C/CLI (libecn-bits.a/so)
   ‣ see c/README

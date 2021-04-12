@@ -1,0 +1,96 @@
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
+
+import java.nio.file.Files
+import java.nio.file.Paths
+
+apply plugin: 'com.android.library'
+
+// project licence: The MirOS Licence AND MIT
+// see src/legal/LICENCE
+//
+// apparently, there’s no standardised way to declare the project licence in Gradle:
+// https://discuss.gradle.org/t/how-to-declare-a-license-for-a-gradle-project/26114
+
+if (DefaultNativePlatform.currentOperatingSystem.windows) {
+    def repoRoot = project.layout.projectDirectory.asFile.parentFile.parentFile.parentFile.absolutePath
+    def proc = ("cmd /c " + repoRoot + "\\test-git.bat /q").execute()
+    proc.waitForProcessOutput(System.out, System.err)
+    if (proc.exitValue() != 0)
+        throw new GradleScriptException("git repository clone consistency check failed", null)
+}
+
+static def checkPathSameness(final File f, final String s, final String msg) {
+    if (!Files.isSameFile(f.toPath(), Paths.get(s)))
+        throw new GradleScriptException(String.format(msg + " <%s>: %s", s, f), null)
+}
+
+static def getUnixPathEquivalent(final File afile) {
+    if (!afile.exists())
+        throw new GradleScriptException("File does not exist: " + afile, null)
+    afile.toPath() // ensure it’s cached
+    String s = afile.absolutePath
+    checkPathSameness(afile, s, "File does not match its absolute path")
+    if (DefaultNativePlatform.currentOperatingSystem.windows) {
+        s = s.replace('\\', '/')
+    }
+    checkPathSameness(afile, s, "File cannot be converted to Unix path")
+    return s
+}
+
+def dirToplev = getUnixPathEquivalent(project.layout.projectDirectory.asFile.parentFile.parentFile)
+
+android {
+    compileSdkVersion 30
+
+    defaultConfig {
+        minSdkVersion 1
+        targetSdkVersion 30
+        ndkVersion "22.1.7171670"
+
+        versionCode 1
+        versionName "0.1"
+
+        setProperty("archivesBaseName", "ecn-bitw")
+
+        externalNativeBuild {
+            cmake {
+                //noinspection GroovyAssignabilityCheck because Gradle and the IDE have different world views…
+                arguments "-DTOPLEV=" + dirToplev
+            }
+            return void // WTF‽
+        }
+
+        return void // WTF‽
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "../../lib/CMakeLists.txt"
+            return void // WTF‽
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = 1.8
+        targetCompatibility = 1.8
+    }
+    buildToolsVersion = '30.0.3'
+}
+
+dependencies {
+    //implementation fileTree(dir: "libs", include: ["*.jar"])
+}
+
+project.afterEvaluate {
+    task externalNativeBuildCleanContainingDirectory(type: Delete) {
+        dependsOn tasks.externalNativeBuildCleanDebug, tasks.externalNativeBuildCleanRelease
+        delete project.layout.projectDirectory.dir(".cxx").asFile
+    }
+    tasks.clean.dependsOn(tasks.externalNativeBuildCleanContainingDirectory)
+}

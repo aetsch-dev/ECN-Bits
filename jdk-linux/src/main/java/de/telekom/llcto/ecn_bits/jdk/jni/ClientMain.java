@@ -212,8 +212,9 @@ public final class ClientMain {
                 final DatagramPacket precv = new DatagramPacket(buf, buf.length);
                 while (true) {
                     // this is REQUIRED for EACH call if re-using a DatagramPacket for multiple
-                    // receive calls; cf. https://bugs.openjdk.java.net/browse/JDK-4161511
-                    precv.setLength(buf.length);
+                    // receive calls; cf. https://bugs.openjdk.java.net/browse/JDK-4161511 but
+                    // do not use setLength as suggested there, use the following invocation:
+                    precv.setData(precv.getData());
                     try {
                         sock.receive(precv);
                     } catch (SocketTimeoutException e) {
@@ -227,7 +228,8 @@ public final class ClientMain {
                       .format(DateTimeFormatter.ISO_INSTANT);
                     final Byte trafficClass = sock.retrieveLastTrafficClass();
                     oneSuccess = true;
-                    final String userData = new String(buf, StandardCharsets.UTF_8);
+                    final String userData = new String(buf,
+                      precv.getOffset(), precv.getLength(), StandardCharsets.UTF_8);
                     System.out.printf(/* what other client would you like it to look like? */
                       /* Android */ /* "• %s %s{%s}%n%s%n" */
                       /* C / CLI */ "%s %s{%s}<%s>%n",

@@ -24,4 +24,10 @@
   https://github.com/jeremylong/dependency-check-gradle/issues/206
   https://github.com/jeremylong/dependency-check-gradle/issues/216
 
-• https://github.com/mono/mono/issues/20958
+• Android/Unity
+  – import the four generated shared objects into Unity, assigning
+    Android support and the correct CPU to each, according to
+    https://docs.unity3d.com/Manual/AndroidNativePlugins.html
+    ‣ maybe we can just import the AAR instead?
+  – now [DllImport("ecn-bitw")] “should just work”, let’s hope it
+    selects the correct .so according to what platform it’s running on
